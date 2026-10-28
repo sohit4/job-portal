@@ -98,18 +98,16 @@ export const updateCompanyById = async (req, res) => {
     const { name, description, website, location } = req.body;
     let logo;
 
-    // ✅ agar file aayi hai tabhi Cloudinary pe upload karo
+    // ✅ agar file aayi hai: pehle Cloudinary try karo, agar fail ho toh seedha Base64 use karo
     if (req.file) {
+      const fileUri = getDataUri(req.file);
       try {
-        const fileUri = getDataUri(req.file);
         const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
         logo = cloudResponse.secure_url;
       } catch (uploadErr) {
-        console.error("Cloudinary upload failed in updateCompanyById:", uploadErr);
-        return res.status(400).json({
-          message: uploadErr.message || "Cloudinary upload failed. Check API_SECRET in backend .env",
-          success: false,
-        });
+        console.warn("Cloudinary upload failed, using Base64 fallback:", uploadErr.message);
+        // Fallback to Base64 (zero external Cloudinary dependency)
+        logo = fileUri.content;
       }
     }
 

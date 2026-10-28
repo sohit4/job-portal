@@ -31,10 +31,11 @@ export const register = async (req, res) => {
         const fileuri = getDataUri(req.file);
         if (fileuri?.content) {
           const cloudResponse = await cloudinary.uploader.upload(fileuri.content);
-          profilePhotoUrl = cloudResponse?.secure_url || "";
+          profilePhotoUrl = cloudResponse?.secure_url || fileuri.content;
         }
       } catch (uploadErr) {
-        console.warn("Cloudinary upload failed (continuing without avatar):", uploadErr.message);
+        console.warn("Cloudinary upload failed (using Base64 fallback):", uploadErr.message);
+        profilePhotoUrl = fileuri.content;
       }
     }
 
@@ -207,6 +208,12 @@ export const updateProfile = async (req, res) => {
     if (cloudResponse) {
       user.profile.resume = cloudResponse.secure_url;
       user.profile.resumeoriginalname = file.originalname;
+    } else if (file) {
+      const fileuri = getDataUri(file);
+      if (fileuri?.content) {
+        user.profile.resume = fileuri.content;
+        user.profile.resumeoriginalname = file.originalname;
+      }
     }
 
     await user.save();
