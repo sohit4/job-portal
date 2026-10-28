@@ -1,6 +1,7 @@
 import Company from '../models/company.model.js';
 import cloudinary from "../utils/cloudinary.js";
 import getDataUri from "../utils/datauri.js";
+
 // REGISTER COMPANY
 export const registerCompany = async (req, res) => {
     try {
@@ -32,7 +33,11 @@ export const registerCompany = async (req, res) => {
         });
 
     } catch (error) {
-        console.log(error);
+        console.error("Error in registerCompany:", error);
+        return res.status(500).json({
+            message: error.message || "Failed to register company",
+            success: false,
+        });
     }
 };
 
@@ -42,9 +47,10 @@ export const getCompany = async (req, res) => {
         const userId = req.id;
         const companies = await Company.find({ userId });
         if (!companies || companies.length === 0) {
-            return res.status(404).json({
-                message: "Company not found",
-                success: false,
+            return res.status(200).json({
+                message: "No companies found",
+                companies: [],
+                success: true,
             });
         }
         return res.status(200).json({
@@ -53,7 +59,11 @@ export const getCompany = async (req, res) => {
             companies,
         });
     } catch (error) {
-        console.log(error);
+        console.error("Error in getCompany:", error);
+        return res.status(500).json({
+            message: error.message || "Failed to fetch companies",
+            success: false,
+        });
     }
 };
 
@@ -74,11 +84,14 @@ export const getCompanyById = async (req, res) => {
             company,
         });
     } catch (error) {
-        console.log(error);
+        console.error("Error in getCompanyById:", error);
+        return res.status(500).json({
+            message: error.message || "Failed to fetch company details",
+            success: false,
+        });
     }
 };
 
-// UPDATE COMPANY
 // UPDATE COMPANY
 export const updateCompanyById = async (req, res) => {
   try {
@@ -87,9 +100,17 @@ export const updateCompanyById = async (req, res) => {
 
     // ✅ agar file aayi hai tabhi Cloudinary pe upload karo
     if (req.file) {
-      const fileUri = getDataUri(req.file);
-      const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
-      logo = cloudResponse.secure_url;
+      try {
+        const fileUri = getDataUri(req.file);
+        const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+        logo = cloudResponse.secure_url;
+      } catch (uploadErr) {
+        console.error("Cloudinary upload failed in updateCompanyById:", uploadErr);
+        return res.status(400).json({
+          message: uploadErr.message || "Cloudinary upload failed. Check API_SECRET in backend .env",
+          success: false,
+        });
+      }
     }
 
     // ✅ agar logo nahi bheja to purana logo waisa ka waisa rahega
@@ -119,6 +140,6 @@ export const updateCompanyById = async (req, res) => {
     });
   } catch (error) {
     console.error("Update error:", error);
-    res.status(500).json({ message: "Server error", success: false });
+    res.status(500).json({ message: error.message || "Server error", success: false });
   }
 };
